@@ -3,8 +3,8 @@ import dbConnect from '@/lib/db';
 import Transaction from '@/lib/models/Transaction';
 import { getXRPLService, closeXRPLService } from '@/lib/xrpl';
 import { getMpesaService } from '@/lib/mpesa';
-import { Wallet } from 'xrpl';
-import { WebSocketManager, broadcastError, broadcastTransactionUpdate } from '@/lib/websocket';
+import {  broadcastTransactionUpdate } from '@/lib/websocket';
+import { getXrpPriceCached } from '@/lib/xrpPrice';
 
 
 
@@ -176,13 +176,8 @@ async function processTransfer(transaction: any) {
 
 async function performUSDToXRPConversion(transaction: any) {
   try {
-    // Get current XRP price from CoinGecko API
-    const response = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=ripple&vs_currencies=usd');
-    const data = await response.json();
-    console.log('xrp data', data);
-    console.log('transcation data', transaction)
-    console.log('transcation data', transaction.amounts)
-    const currentXRPPrice = data.ripple.usd;
+    // Get current XRP price from server-side cache (refreshes at most once per minute)
+    const currentXRPPrice = await getXrpPriceCached();
     
     // Calculate XRP amount based on current price
     const xrpAmount = transaction.amounts.usd / currentXRPPrice;
