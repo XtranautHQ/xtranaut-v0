@@ -16,7 +16,16 @@ function getNow(): number {
 }
 
 async function fetchXrpPriceFromCoinGecko(): Promise<number> {
-  const res = await fetch(COINGECKO_URL, { cache: 'no-store' });
+  const res = await fetch(
+    COINGECKO_URL, {
+      method: 'GET',
+      cache: 'no-store',
+      headers: {
+        'x-cg-demo-api-key': process.env.COINGECKO_API_KEY!
+      } 
+    }
+  );
+  
   if (!res.ok) {
     throw new Error(`CoinGecko error: ${res.status}`);
   }
@@ -35,6 +44,7 @@ async function updateCache(): Promise<PriceCache> {
     globalThis.__xrpPriceCache = cache;
     return cache;
   } catch (err) {
+    console.log('.................', err);
     // On failure, fall back to previous cache if present; otherwise default
     if (globalThis.__xrpPriceCache) {
       return globalThis.__xrpPriceCache;
