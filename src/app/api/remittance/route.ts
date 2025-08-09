@@ -179,6 +179,9 @@ async function performUSDToXRPConversion(transaction: any) {
     // Get current XRP price from CoinGecko API
     const response = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=ripple&vs_currencies=usd');
     const data = await response.json();
+    console.log('xrp data', data);
+    console.log('transcation data', transaction)
+    console.log('transcation data', transaction.amounts)
     const currentXRPPrice = data.ripple.usd;
     
     // Calculate XRP amount based on current price
