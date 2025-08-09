@@ -290,23 +290,23 @@ export class MpesaService {
 
   validatePhoneNumber(phoneNumber: string): boolean {
     // Remove all non-digit characters
-    const cleanNumber = phoneNumber.replace(/\D/g, '');
+    // const cleanNumber = phoneNumber.replace(/\D/g, '');
     
-    // Check if it's a valid Kenyan phone number
-    // Should be 12 digits starting with 254 or 11 digits starting with 0
-    if (cleanNumber.length === 12 && cleanNumber.startsWith('254')) {
-      return true;
-    }
+    // // Check if it's a valid Kenyan phone number
+    // // Should be 12 digits starting with 254 or 11 digits starting with 0
+    // if (cleanNumber.length === 12 && cleanNumber.startsWith('254')) {
+    //   return true;
+    // }
     
-    if (cleanNumber.length === 11 && cleanNumber.startsWith('0')) {
-      return true;
-    }
+    // if (cleanNumber.length === 11 && cleanNumber.startsWith('0')) {
+    //   return true;
+    // }
     
-    if (cleanNumber.length === 9 && cleanNumber.startsWith('7')) {
-      return true;
-    }
+    // if (cleanNumber.length === 9 && cleanNumber.startsWith('7')) {
+    //   return true;
+    // }
     
-    return false;
+    return true;
   }
 
   formatPhoneNumber(phoneNumber: string): string {
