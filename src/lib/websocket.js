@@ -45,6 +45,7 @@ export class WebSocketManager {
       this.clients.set(transactionId, new Set());
     }
     this.clients.get(transactionId).add(ws);
+    console.log('subscribed successfully', transactionId);
   }
 
   unsubscribeFromTransaction(transactionId, ws) {
