@@ -21,17 +21,10 @@ export function XRPProvider({ children }: { children: ReactNode }) {
       setIsLoading(true);
       setError(null);
       
-      // Simulate API call to CoinGecko for XRP price
-      // In a real implementation, you would call the actual CoinGecko API
-      const response = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=ripple&vs_currencies=usd');
+      const response = await fetch('/api/xrp/price');
       const data = await response.json();
-      
-      if (data.ripple && data.ripple.usd) {
-        setXrpPrice(data.ripple.usd);
-      } else {
-        // Fallback to a realistic XRP price for demo purposes
-        setXrpPrice(0.52);
-      }
+      const price = typeof data.price === 'number' ? data.price : 0.52;
+      setXrpPrice(price);
     } catch (err) {
       console.error('Error fetching XRP price:', err);
       setError('Failed to fetch XRP price');
@@ -49,8 +42,8 @@ export function XRPProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     fetchXRPPrice();
     
-    // Refresh price every 5 minutes
-    const interval = setInterval(fetchXRPPrice, 5 * 60 * 1000);
+    // Refresh price every 1 minute to align with server cache TTL
+    const interval = setInterval(fetchXRPPrice, 60 * 1000);
     
     return () => clearInterval(interval);
   }, []);
