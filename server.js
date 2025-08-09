@@ -1,14 +1,12 @@
 import { createServer } from 'http';
 import { parse } from 'url';
 import next from 'next';
-import { initializeWebSocket } from './src/lib/websocket.ts';
-import { WebSocketServer } from 'ws';
+import { initializeWebSocket } from './src/lib/websocket.js';
 
 const dev = process.env.NODE_ENV !== 'production';
 const hostname = 'localhost';
 const port = process.env.PORT || 3000;
 
-// Prepare the Next.js app
 const app = next({ dev, hostname, port });
 const handle = app.getRequestHandler();
 
@@ -17,9 +15,7 @@ app.prepare().then(() => {
     try {
       const parsedUrl = parse(req.url, true);
       
-      // Handle WebSocket upgrade requests
       if (req.headers.upgrade && req.headers.upgrade.toLowerCase() === 'websocket') {
-        // Let the WebSocket server handle the upgrade
         return;
       }
       
@@ -33,7 +29,7 @@ app.prepare().then(() => {
 
   // Initialize WebSocket server
   initializeWebSocket(server);
-  
+    
 
   server.listen(port, (err) => {
     if (err) throw err;
