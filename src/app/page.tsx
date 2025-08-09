@@ -57,7 +57,7 @@ export default function Home(): React.JSX.Element {
               </svg>
             </div>
             <h3 className="text-lg font-semibold text-gray-900 mb-2">Lightning Fast</h3>
-            <p className="text-gray-600">Complete transactions in 3-5 seconds with XRP Ledger's instant settlement.</p>
+            <p className="text-gray-600">Complete transactions in 3-5 seconds with XRP Ledger&apos;s instant settlement.</p>
           </div>
 
           <div className="bg-white rounded-lg p-6 shadow-sm">

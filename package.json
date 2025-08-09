@@ -3,12 +3,13 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --turbopack",
+    "dev": "node server.js",
     "build": "next build",
-    "start": "next start",
+    "start": "NODE_ENV=production node server.js",
     "lint": "next lint"
   },
   "dependencies": {
+    "@heroicons/react": "^2.2.0",
     "axios": "^1.11.0",
     "crypto": "^1.0.1",
     "mongodb": "^6.18.0",
@@ -17,6 +18,9 @@
     "node-cron": "^3.0.3",
     "react": "19.1.0",
     "react-dom": "19.1.0",
+    "stripe": "^18.4.0",
+    "uuid": "^11.1.0",
+    "ws": "^8.18.3",
     "xrpl": "^3.1.0"
   },
   "devDependencies": {
@@ -25,6 +29,7 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/ws": "^8.18.1",
     "eslint": "^9",
     "eslint-config-next": "15.4.5",
     "tailwindcss": "^4",

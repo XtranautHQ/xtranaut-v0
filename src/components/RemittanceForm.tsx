@@ -1,367 +1,450 @@
 'use client';
 
-import { useState } from 'react';
-import { useXRP } from '@/contexts/XRPContext';
+import { useState, useEffect } from 'react';
+import { TransferStepper } from './TransferStepper';
+
+interface RemittanceFormProps {
+  xrpPrice: number;
+}
 
 interface FormData {
   senderName: string;
   senderEmail: string;
-  recipientName: string;
-  recipientPhone: string;
-  amount: string;
+  receiverPhone: string;
+  receiverName: string;
   country: string;
+  amount: string;
   addToVault: boolean;
 }
 
-interface FeeCalculation {
-  xrpAmount: number;
-  fixedFeeUSD: number;
-  westernUnionFee: number;
-  savings: number;
-  recipientAmount: number;
+interface ValidationErrors {
+  [key: string]: string;
 }
 
-interface TransactionSnapshot {
-  input: {
-    usdAmount: number;
-    recipientPhone: string;
-    xrpRate: number;
-    country: string;
-    senderName: string;
-    senderEmail: string;
-    recipientName: string;
-    addToVault: boolean;
-  };
-  calculation: FeeCalculation;
-  ledgerTime: string;
-  fxSource: string;
-}
+const COUNTRIES = [
+  { code: 'KE', name: 'Kenya', currency: 'KES', fxRate: 160.5 },
+  { code: 'NG', name: 'Nigeria', currency: 'NGN', fxRate: 1500.0 },
+  { code: 'GH', name: 'Ghana', currency: 'GHS', fxRate: 12.5 },
+  { code: 'UG', name: 'Uganda', currency: 'UGX', fxRate: 3800.0 },
+  { code: 'TZ', name: 'Tanzania', currency: 'TZS', fxRate: 2500.0 },
+];
 
-interface TransactionData {
-  amount: string;
-  savings: string;
-  recipientAmount: string;
-  xrpAmount: string;
-  snapshot: TransactionSnapshot;
-}
+const FIXED_NETWORK_FEE = 0.25; // XRP
+const WESTERN_UNION_FEE_PERCENTAGE = 8; // 8% fee for comparison
 
-interface RemittanceFormProps {
-  onTransaction: (data: TransactionData) => Promise<void>;
-  isSaving?: boolean;
-  error?: string;
-}
-
-export function RemittanceForm({ onTransaction, isSaving = false, error: parentError }: RemittanceFormProps): React.JSX.Element {
-  const { xrpData } = useXRP();
+export function RemittanceForm({ xrpPrice }: RemittanceFormProps) {
   const [formData, setFormData] = useState<FormData>({
     senderName: '',
     senderEmail: '',
-    recipientName: '',
-    recipientPhone: '',
+    receiverPhone: '',
+    receiverName: '',
+    country: '',
     amount: '',
-    country: 'Kenya',
-    addToVault: false
+    addToVault: false,
   });
 
-  const [isProcessing, setIsProcessing] = useState<boolean>(false);
-  const [error, setError] = useState<string>('');
+  const [errors, setErrors] = useState<ValidationErrors>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedCountry, setSelectedCountry] = useState<any>(null);
+  const [xrpAmount, setXrpAmount] = useState(0);
+  const [localAmount, setLocalAmount] = useState(0);
+  const [savingsAmount, setSavingsAmount] = useState(0);
 
-  // Constants
-  const FIXED_FEE_XRP: number = 0.25;
-  const WESTERN_UNION_FEE_PERCENT: number = 8.5; // 8.5% fee for comparison
+  // Calculate amounts when form data changes
+  useEffect(() => {
+    if (formData.amount && selectedCountry) {
+      const usdAmount = parseFloat(formData.amount);
+      const xrpAmount = (usdAmount - FIXED_NETWORK_FEE) / xrpPrice;
+      const localAmount = usdAmount * selectedCountry.fxRate;
+      
+      setXrpAmount(xrpAmount);
+      setLocalAmount(localAmount);
+      
+      // Calculate savings compared to Western Union
+      const westernUnionFee = usdAmount * (WESTERN_UNION_FEE_PERCENTAGE / 100);
+      const xrpFee = FIXED_NETWORK_FEE;
+      const savings = westernUnionFee - xrpFee;
+      setSavingsAmount(savings);
+    }
+  }, [formData.amount, selectedCountry, xrpPrice]);
 
-  const calculateFees = (amount: number): FeeCalculation => {
-    const fixedFeeUSD: number = FIXED_FEE_XRP * xrpData.price;
-    const xrpAmount: number = (amount - fixedFeeUSD) / xrpData.price;
-    const westernUnionFee: number = amount * (WESTERN_UNION_FEE_PERCENT / 100);
-    const savings: number = westernUnionFee - fixedFeeUSD;
-    
-    return {
-      xrpAmount,
-      fixedFeeUSD,
-      westernUnionFee,
-      savings: Math.max(0, savings),
-      recipientAmount: amount * xrpData.usdKesRate
-    };
+  // Update selected country when country changes
+  useEffect(() => {
+    if (formData.country) {
+      const country = COUNTRIES.find(c => c.code === formData.country);
+      setSelectedCountry(country);
+    }
+  }, [formData.country]);
+
+  const validateForm = (): boolean => {
+    const newErrors: ValidationErrors = {};
+
+    // Sender validation
+    if (!formData.senderName.trim()) {
+      newErrors.senderName = 'Sender name is required';
+    }
+
+    if (!formData.senderEmail.trim()) {
+      newErrors.senderEmail = 'Sender email is required';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.senderEmail)) {
+      newErrors.senderEmail = 'Please enter a valid email address';
+    }
+
+    // Receiver validation
+    if (!formData.receiverName.trim()) {
+      newErrors.receiverName = 'Receiver name is required';
+    }
+
+    if (!formData.receiverPhone.trim()) {
+      newErrors.receiverPhone = 'Receiver phone number is required';
+    } else if (!/^\+?[\d\s\-\(\)]+$/.test(formData.receiverPhone)) {
+      newErrors.receiverPhone = 'Please enter a valid phone number';
+    }
+
+    // Amount validation
+    if (!formData.amount) {
+      newErrors.amount = 'Amount is required';
+    } else {
+      const amount = parseFloat(formData.amount);
+      if (isNaN(amount) || amount <= 0) {
+        newErrors.amount = 'Please enter a valid amount';
+      } else if (amount < 10) {
+        newErrors.amount = 'Minimum amount is $10';
+      } else if (amount > 10000) {
+        newErrors.amount = 'Maximum amount is $10,000';
+      }
+    }
+
+    // Country validation
+    if (!formData.country) {
+      newErrors.country = 'Please select a destination country';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>): Promise<void> => {
+  const handleInputChange = (field: keyof FormData, value: string | boolean) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+
+    // Clear error when user starts typing
+    if (errors[field]) {
+      setErrors(prev => ({
+        ...prev,
+        [field]: ''
+      }));
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsProcessing(true);
-    setError('');
-
-    const amount: number = parseFloat(formData.amount);
-    if (!amount || amount <= 0) {
-      setError('Please enter a valid amount');
-      setIsProcessing(false);
-      return;
-    }
-
-    if (!formData.recipientPhone || formData.recipientPhone.length < 10) {
-      setError('Please enter a valid phone number');
-      setIsProcessing(false);
-      return;
-    }
-
-    // Simulate processing delay
-    await new Promise<void>((resolve) => setTimeout(resolve, 2000));
-
-    // Simulate failure cases
-    if (formData.recipientPhone.includes('000')) {
-      setError('Invalid phone number. Please check and try again.');
-      setIsProcessing(false);
-      return;
-    }
-
-    if (amount > 1000) {
-      setError('Insufficient funds. Maximum transfer amount is $1,000.');
-      setIsProcessing(false);
-      return;
-    }
-
-    const fees: FeeCalculation = calculateFees(amount);
     
-    // Log transaction snapshot
-    const transactionSnapshot: TransactionSnapshot = {
-      input: {
-        usdAmount: amount,
-        recipientPhone: formData.recipientPhone,
-        xrpRate: xrpData.price,
-        country: formData.country,
-        senderName: formData.senderName,
-        senderEmail: formData.senderEmail,
-        recipientName: formData.recipientName,
-        addToVault: formData.addToVault
-      },
-      calculation: fees,
-      ledgerTime: new Date().toISOString(),
-      fxSource: 'Central Bank of Kenya reference rate'
-    };
+    if (!validateForm()) {
+      return;
+    }
 
-    // Call parent handler
-    await onTransaction({
-      amount: amount.toFixed(2),
-      savings: fees.savings.toFixed(2),
-      recipientAmount: fees.recipientAmount.toFixed(2),
-      xrpAmount: fees.xrpAmount.toFixed(2),
-      snapshot: transactionSnapshot
-    });
+    setIsSubmitting(true);
 
-    setIsProcessing(false);
-    
-    // Reset form only if successful
-    if (!parentError) {
-      setFormData({
-        senderName: '',
-        senderEmail: '',
-        recipientName: '',
-        recipientPhone: '',
-        amount: '',
-        country: 'Kenya',
-        addToVault: false
+    try {
+      // Prepare transaction data for API and Stripe
+      const transactionRequest = {
+        sender: {
+          name: formData.senderName,
+          email: formData.senderEmail,
+        },
+        receiver: {
+          name: formData.receiverName,
+          phone: formData.receiverPhone,
+          country: selectedCountry.code,
+        },
+        amounts: {
+          usd: parseFloat(formData.amount),
+          xrp: xrpAmount,
+          local: localAmount,
+          localCurrency: selectedCountry.currency,
+        },
+        fees: {
+          networkFee: FIXED_NETWORK_FEE,
+          totalFee: FIXED_NETWORK_FEE,
+          savings: savingsAmount,
+        },
+        vault: {
+          enabled: formData.addToVault,
+          amount: formData.addToVault ? 20 : 0,
+        },
+        fxRate: {
+          usdToXrp: xrpPrice,
+          usdToLocal: selectedCountry.fxRate,
+          source: 'Central Bank of Kenya reference rate',
+        },
+      };
+
+      // Persist request to reconstruct after Stripe redirect
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem('remittance_request', JSON.stringify(transactionRequest));
+      }
+
+      // Create Stripe checkout session
+      const response = await fetch('/api/checkout', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(transactionRequest),
       });
-    };
-  }
 
-  const fees: FeeCalculation | null = formData.amount ? calculateFees(parseFloat(formData.amount)) : null;
+      const result = await response.json();
+      if (!response.ok || !result.url) {
+        throw new Error(result.error || 'Unable to start checkout');
+      }
+
+      // Redirect to Stripe Checkout
+      window.location.href = result.url;
+
+    } catch (error) {
+      console.error('Checkout failed:', error);
+      setErrors({ submit: error instanceof Error ? error.message : 'Payment initialization failed. Please try again.' });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
-    <div className="bg-white rounded-lg shadow-lg p-6">
-      <div className="mb-6">
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">Send Money to Kenya</h2>
-        <p className="text-gray-600">Fast, secure transfers via XRP Ledger</p>
-      </div>
-
-      <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Sender Information */}
+    <form onSubmit={handleSubmit} className="space-y-6">
+      {/* Sender Information */}
+      <div className="bg-gray-50 p-6 rounded-lg">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Sender Information</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Your Name
+            <label htmlFor="senderName" className="block text-sm font-medium text-gray-700 mb-2">
+              Full Name *
             </label>
             <input
               type="text"
-              required
+              id="senderName"
               value={formData.senderName}
-              onChange={(e) => setFormData({ ...formData, senderName: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              onChange={(e) => handleInputChange('senderName', e.target.value)}
+              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                errors.senderName ? 'border-red-500' : 'border-gray-300'
+              }`}
               placeholder="Enter your full name"
             />
+            {errors.senderName && (
+              <p className="text-red-500 text-sm mt-1">{errors.senderName}</p>
+            )}
           </div>
+
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Your Email
+            <label htmlFor="senderEmail" className="block text-sm font-medium text-gray-700 mb-2">
+              Email Address *
             </label>
             <input
               type="email"
-              required
+              id="senderEmail"
               value={formData.senderEmail}
-              onChange={(e) => setFormData({ ...formData, senderEmail: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              onChange={(e) => handleInputChange('senderEmail', e.target.value)}
+              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                errors.senderEmail ? 'border-red-500' : 'border-gray-300'
+              }`}
               placeholder="Enter your email address"
             />
+            {errors.senderEmail && (
+              <p className="text-red-500 text-sm mt-1">{errors.senderEmail}</p>
+            )}
           </div>
         </div>
+      </div>
 
-        {/* Recipient Information */}
+      {/* Receiver Information */}
+      <div className="bg-gray-50 p-6 rounded-lg">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Receiver Information</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Recipient Name
+            <label htmlFor="receiverName" className="block text-sm font-medium text-gray-700 mb-2">
+              Receiver Name *
             </label>
             <input
               type="text"
-              required
-              value={formData.recipientName}
-              onChange={(e) => setFormData({ ...formData, recipientName: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder="Enter recipient's full name"
+              id="receiverName"
+              value={formData.receiverName}
+              onChange={(e) => handleInputChange('receiverName', e.target.value)}
+              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                errors.receiverName ? 'border-red-500' : 'border-gray-300'
+              }`}
+              placeholder="Enter receiver's full name"
             />
+            {errors.receiverName && (
+              <p className="text-red-500 text-sm mt-1">{errors.receiverName}</p>
+            )}
           </div>
+
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Recipient Phone
+            <label htmlFor="receiverPhone" className="block text-sm font-medium text-gray-700 mb-2">
+              Phone Number *
             </label>
             <input
               type="tel"
-              required
-              value={formData.recipientPhone}
-              onChange={(e) => setFormData({ ...formData, recipientPhone: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder="+254712345678"
+              id="receiverPhone"
+              value={formData.receiverPhone}
+              onChange={(e) => handleInputChange('receiverPhone', e.target.value)}
+              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                errors.receiverPhone ? 'border-red-500' : 'border-gray-300'
+              }`}
+              placeholder="+1234567890"
             />
+            {errors.receiverPhone && (
+              <p className="text-red-500 text-sm mt-1">{errors.receiverPhone}</p>
+            )}
+          </div>
+
+          <div className="md:col-span-2">
+            <label htmlFor="country" className="block text-sm font-medium text-gray-700 mb-2">
+              Destination Country *
+            </label>
+            <select
+              id="country"
+              value={formData.country}
+              onChange={(e) => handleInputChange('country', e.target.value)}
+              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                errors.country ? 'border-red-500' : 'border-gray-300'
+              }`}
+            >
+              <option value="">Select a country</option>
+              {COUNTRIES.map(country => (
+                <option key={country.code} value={country.code}>
+                  {country.name} ({country.currency})
+                </option>
+              ))}
+            </select>
+            {errors.country && (
+              <p className="text-red-500 text-sm mt-1">{errors.country}</p>
+            )}
           </div>
         </div>
+      </div>
 
-        {/* Amount and Country */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {/* Transfer Details */}
+      <div className="bg-gray-50 p-6 rounded-lg">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Transfer Details</h3>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Amount (USD)
+            <label htmlFor="amount" className="block text-sm font-medium text-gray-700 mb-2">
+              Amount (USD) *
             </label>
             <input
               type="number"
-              required
-              min="1"
-              max="1000"
-              step="0.01"
+              id="amount"
               value={formData.amount}
-              onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder="Enter amount in USD"
+              onChange={(e) => handleInputChange('amount', e.target.value)}
+              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                errors.amount ? 'border-red-500' : 'border-gray-300'
+              }`}
+              placeholder="0.00"
+              min="10"
+              max="10000"
+              step="0.01"
             />
+            {errors.amount && (
+              <p className="text-red-500 text-sm mt-1">{errors.amount}</p>
+            )}
           </div>
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Country
+              XRP Amount
             </label>
-            <select
-              value={formData.country}
-              onChange={(e) => setFormData({ ...formData, country: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              <option value="Kenya">Kenya</option>
-              <option value="Uganda">Uganda</option>
-              <option value="Tanzania">Tanzania</option>
-              <option value="Rwanda">Rwanda</option>
-            </select>
+            <div className="w-full px-3 py-2 bg-gray-100 border border-gray-300 rounded-md">
+              <span className="text-gray-900 font-medium">
+                {xrpAmount > 0 ? `${xrpAmount.toFixed(2)} XRP` : 'Enter amount above'}
+              </span>
+            </div>
           </div>
         </div>
 
-        {/* Additional Options */}
-        <div className="flex items-center">
+        {/* FX Rate Display */}
+        {selectedCountry && (
+          <div className="bg-blue-50 p-4 rounded-lg mb-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-blue-800">
+                  <strong>FX Rate:</strong> 1 USD = {selectedCountry.fxRate} {selectedCountry.currency}
+                </p>
+                <p className="text-xs text-blue-600 mt-1">
+                  Source: {selectedCountry.code === 'KE' ? 'Central Bank of Kenya reference rate' : 'Central Bank reference rate'}
+                </p>
+              </div>
+              <div className="text-right">
+                <p className="text-sm text-blue-800">
+                  <strong>Local Amount:</strong>
+                </p>
+                <p className="text-lg font-bold text-blue-900">
+                  {localAmount > 0 ? `${localAmount.toFixed(2)} ${selectedCountry.currency}` : '-'}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Vault Toggle */}
+        <div className="flex items-center space-x-3 p-4 bg-green-50 rounded-lg">
           <input
             type="checkbox"
             id="addToVault"
             checked={formData.addToVault}
-            onChange={(e) => setFormData({ ...formData, addToVault: e.target.checked })}
-            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+            onChange={(e) => handleInputChange('addToVault', e.target.checked)}
+            className="w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-green-500"
           />
-          <label htmlFor="addToVault" className="ml-2 block text-sm text-gray-900">
-            Save recipient for future transfers
+          <label htmlFor="addToVault" className="text-sm font-medium text-green-800">
+            Add $20 to savings vault?
           </label>
+          <span className="text-xs text-green-600">(Demo feature - no real deduction)</span>
         </div>
 
-        {/* Fee Calculation Display */}
-        {fees && (
-          <div className="bg-gray-50 rounded-lg p-4">
-            <h3 className="text-lg font-semibold text-gray-900 mb-3">Fee Breakdown</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Amount to Send:</span>
-                  <span className="font-semibold text-green-600">${formData.amount}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Recipient Gets:</span>
-                  <span className="font-semibold text-blue-600">KES {fees.recipientAmount.toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">XRP Amount:</span>
-                  <span className="font-semibold text-orange-600">{fees.xrpAmount.toFixed(2)} XRP</span>
-                </div>
-              </div>
-              <div className="space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Service Fee:</span>
-                  <span className="font-medium">${fees.fixedFeeUSD.toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Network Fee:</span>
-                  <span className="font-medium">~$0.0002</span>
-                </div>
-                <div className="flex justify-between border-t pt-2">
-                  <span className="text-gray-600">Total Cost:</span>
-                  <span className="font-semibold text-gray-900">${(parseFloat(formData.amount) + fees.fixedFeeUSD).toFixed(2)}</span>
-                </div>
-              </div>
+        {/* Fee Breakdown */}
+        <div className="bg-white mt-4 p-4 rounded-lg border border-gray-100">
+          <h4 className="font-semibold text-gray-900 mb-3">Fee Breakdown</h4>
+          <div className="space-y-2 text-sm">
+            <div className="flex justify-between">
+              <span>Network Fee (XRPL):</span>
+              <span className="font-medium">{FIXED_NETWORK_FEE} XRP (${(FIXED_NETWORK_FEE * xrpPrice).toFixed(2)})</span>
             </div>
-            
-            {/* Savings Comparison */}
-            <div className="mt-4 p-3 bg-green-50 rounded-lg">
-              <div className="flex justify-between items-center">
-                <span className="text-green-800 font-medium">You save:</span>
-                <span className="text-green-800 font-bold">${fees.savings.toFixed(2)}</span>
-              </div>
-              <p className="text-sm text-green-700 mt-1">
-                Compared to Western Union (${fees.westernUnionFee.toFixed(2)} fee)
-              </p>
+            <div className="flex justify-between text-green-600">
+              <span>Savings vs Western Union:</span>
+              <span className="font-medium">${savingsAmount.toFixed(2)}</span>
+            </div>
+            <div className="border-t pt-2 flex justify-between font-semibold">
+              <span>Total Fee:</span>
+              <span>${(FIXED_NETWORK_FEE * xrpPrice).toFixed(2)}</span>
             </div>
           </div>
-        )}
+        </div>
+      </div>
 
-        {/* Error Display */}
-        {error && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                </svg>
-              </div>
-              <div className="ml-3">
-                <p className="text-sm font-medium text-red-800">{error}</p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Submit Button */}
+      {/* Submit Button */}
+      <div className="flex justify-center">
         <button
           type="submit"
-          disabled={isProcessing || xrpData.isLoading}
-          className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-semibold py-3 px-6 rounded-lg transition-colors duration-200"
+          disabled={isSubmitting}
+          className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-semibold py-3 px-8 rounded-lg text-lg transition-colors duration-200 w-full md:w-auto"
         >
-          {isProcessing ? (
-            <div className="flex items-center justify-center">
-              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-              Processing...
+          {isSubmitting ? (
+            <div className="flex items-center space-x-2">
+              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+              <span>Processing...</span>
             </div>
           ) : (
             'Send Money'
           )}
         </button>
-      </form>
-    </div>
+      </div>
+
+      {errors.submit && (
+        <div className="text-red-500 text-center">{errors.submit}</div>
+      )}
+    </form>
   );
-} 
+}

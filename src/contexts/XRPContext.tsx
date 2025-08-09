@@ -1,110 +1,65 @@
 'use client';
 
-import { fetchXRPPriceApi } from '@/services/coingecko';
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
-interface XRPData {
-  price: number;
-  usdKesRate: number;
+interface XRPContextType {
+  xrpPrice: number;
   isLoading: boolean;
   error: string | null;
-}
-
-interface XRPContextType {
-  xrpData: XRPData;
-  updateXRPPrice: (price: number) => void;
-  updateUSDKESRate: (rate: number) => void;
-  refreshData: () => Promise<void>;
+  refreshXRPPrice: () => Promise<void>;
 }
 
 const XRPContext = createContext<XRPContextType | undefined>(undefined);
 
-interface XRPProviderProps {
-  children: ReactNode;
-}
+export function XRPProvider({ children }: { children: ReactNode }) {
+  const [xrpPrice, setXrpPrice] = useState<number>(0.5); // Default fallback price
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
 
-export function XRPProvider({ children }: XRPProviderProps): React.JSX.Element {
-  const [xrpData, setXrpData] = useState<XRPData>({
-    price: 0.52,
-    usdKesRate: 158.45,
-    isLoading: false,
-    error: null,
-  });
-
-  // Simulate fetching XRP price from an API
-  const fetchXRPPrice = async (): Promise<number> => {
-    const price = await fetchXRPPriceApi();
-    return price ? price : 0;
-  };
-
-  // Simulate fetching USD/KES rate
-  const fetchUSDKESRate = async (): Promise<number> => {
-    // Simulate API call delay
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    // Simulate rate fluctuation
-    const baseRate = 158.45;
-    const variation = (Math.random() - 0.5) * 0.5; // ±0.25 variation
-    return Math.round((baseRate + variation) * 100) / 100;
-  };
-
-  const refreshData = async (): Promise<void> => {
-    setXrpData(prev => ({ ...prev, isLoading: true, error: null }));
-
+  const fetchXRPPrice = async () => {
     try {
-      const [newPrice, newRate] = await Promise.all([
-        fetchXRPPrice(),
-        fetchUSDKESRate(),
-      ]);
-
-      setXrpData({
-        price: newPrice,
-        usdKesRate: newRate,
-        isLoading: false,
-        error: null,
-      });
-    } catch (error) {
-      setXrpData(prev => ({
-        ...prev,
-        isLoading: false,
-        error: 'Failed to fetch latest rates',
-      }));
+      setIsLoading(true);
+      setError(null);
+      
+      // Simulate API call to CoinGecko for XRP price
+      // In a real implementation, you would call the actual CoinGecko API
+      const response = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=ripple&vs_currencies=usd');
+      const data = await response.json();
+      
+      if (data.ripple && data.ripple.usd) {
+        setXrpPrice(data.ripple.usd);
+      } else {
+        // Fallback to a realistic XRP price for demo purposes
+        setXrpPrice(0.52);
+      }
+    } catch (err) {
+      console.error('Error fetching XRP price:', err);
+      setError('Failed to fetch XRP price');
+      // Use fallback price for demo
+      setXrpPrice(0.52);
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const updateXRPPrice = (price: number): void => {
-    setXrpData(prev => ({
-      ...prev,
-      price,
-    }));
+  const refreshXRPPrice = async () => {
+    await fetchXRPPrice();
   };
 
-  const updateUSDKESRate = (rate: number): void => {
-    setXrpData(prev => ({
-      ...prev,
-      usdKesRate: rate,
-    }));
-  };
-
-  // Auto-refresh data every 30 seconds
   useEffect(() => {
-    const interval = setInterval(() => {
-      refreshData();
-    }, 30000);
-
+    fetchXRPPrice();
+    
+    // Refresh price every 5 minutes
+    const interval = setInterval(fetchXRPPrice, 5 * 60 * 1000);
+    
     return () => clearInterval(interval);
   }, []);
 
-  // Initial data fetch
-  useEffect(() => {
-    refreshData();
-  }, []);
-
   const value: XRPContextType = {
-    xrpData,
-    updateXRPPrice,
-    updateUSDKESRate,
-    refreshData,
+    xrpPrice,
+    isLoading,
+    error,
+    refreshXRPPrice,
   };
 
   return (
@@ -114,10 +69,10 @@ export function XRPProvider({ children }: XRPProviderProps): React.JSX.Element {
   );
 }
 
-export function useXRP(): XRPContextType {
+export function useXRP() {
   const context = useContext(XRPContext);
   if (context === undefined) {
     throw new Error('useXRP must be used within an XRPProvider');
   }
   return context;
-} 
+}
