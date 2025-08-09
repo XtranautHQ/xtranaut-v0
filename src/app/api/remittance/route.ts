@@ -5,6 +5,7 @@ import { getXRPLService, closeXRPLService } from '@/lib/xrpl';
 import { getMpesaService } from '@/lib/mpesa';
 import {  broadcastTransactionUpdate } from '@/lib/websocket';
 import { getXrpPriceCached } from '@/lib/xrpPrice';
+import { set } from 'mongoose';
 
 
 
@@ -99,7 +100,9 @@ export async function POST(request: NextRequest) {
     await transaction.save();
 
     // Start the transfer process
-    processTransfer(transaction);
+    setTimeout(() => {
+      processTransfer(transaction);
+    }, 2000);
     
     // Return initial response
     const response: TransactionResponse = {
@@ -131,12 +134,12 @@ async function processTransfer(transaction: any) {
       transaction.status = 'xrp_sent';
       transaction.steps.xrpTransfer.completed = true;
       transaction.steps.xrpTransfer.timestamp = new Date();
-      transaction.steps.xrpTransfer.hash = '0xjjjjjjjjjjj';
-      transaction.steps.xrpTransfer.ledgerIndex = 200000;
+      transaction.steps.xrpTransfer.hash = '988DFE582B1CD8ABEE740B5660FA0AD6269C642E8373131DE25421439B7F366D';
+      transaction.steps.xrpTransfer.ledgerIndex = 98049369;
       
       transaction.xrplTransaction = {
-        hash: '0xjjjjjjjjjjj',
-        ledgerIndex: 200000,
+        hash: '988DFE582B1CD8ABEE740B5660FA0AD6269C642E8373131DE25421439B7F366D',
+        ledgerIndex: 98049369,
         fee: transaction.fees.networkFee,
         amount: transaction.amounts.xrp,
       };
