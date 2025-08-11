@@ -5,6 +5,7 @@ import Transaction from '@/lib/models/Transaction';
 import { generateIdempotencyKey, generateFXRateHash } from '@/lib/utils';
 import { getXrpPriceCached } from '@/lib/xrpPrice';
 import { broadcastTransactionUpdate } from '@/lib/websocket';
+import { getMpesaService } from '@/lib/mpesa';
 
 const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
 const stripeWebhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
@@ -18,6 +19,7 @@ export async function POST(request: NextRequest) {
     const stripe = new Stripe(stripeSecretKey);
     const sig = request.headers.get('stripe-signature') as string;
     const rawBody = await request.text();
+
     let event: Stripe.Event;
 
     try {
@@ -219,23 +221,49 @@ async function performXRPTransfer(transaction: any) {
 
 async function performMpesaPayout(transaction: any) {
   try {
-    transaction.status = 'mpesa_processing';
-    transaction.steps.mpesaPayout.completed = true;
-    transaction.steps.mpesaPayout.timestamp = new Date();
-    transaction.steps.mpesaPayout.reference = `MPESA_${Date.now()}`;
+    const mpesaService = getMpesaService();
     
-    transaction.mpesaTransaction = {
-      reference: `MPESA_${Date.now()}`,
-      status: 'pending',
-      amount: transaction.amounts.local,
-    };
+    // Validate phone number
+    if (!mpesaService.validatePhoneNumber(transaction.receiver.phone)) {
+      throw new Error('Invalid phone number format');
+    }
     
+    // Format phone number
+    const formattedPhone = mpesaService.formatPhoneNumber(transaction.receiver.phone);
+    
+    // Initiate B2C payment to recipient
+    const payoutResult = await mpesaService.initiateB2CPayment(
+      formattedPhone,
+      transaction.amounts.local,
+      transaction.transactionId,
+      `Remittance payout for ${transaction.receiver.name}`
+    );
+
+    
+    if (payoutResult.success) {
+      transaction.status = 'mpesa_processing';
+      transaction.steps.mpesaPayout.completed = true;
+      transaction.steps.mpesaPayout.timestamp = new Date();
+      transaction.steps.mpesaPayout.reference = `MPESA_${Date.now()}`;
+      
+      transaction.mpesaTransaction = {
+        reference: `MPESA_${Date.now()}`,
+        status: 'pending',
+        amount: transaction.amounts.local,
+      };
+      
+      await transaction.save();
+
+      // broadcastTransaction(transaction);
+      console.log(`Step 3 completed: M-PESA payout initiated for ${transaction.transactionId}`);
+    } else {
+      throw new Error(payoutResult.error || 'M-PESA payout failed');
+    }
+  } catch (error: any) {
+    console.error('M-PESA payout failed:', error);
+    transaction.steps.mpesaPayout.error = error instanceof Error ? error.message : 'Payout failed';
     await transaction.save();
 
-    broadcastTransaction(transaction);
-    console.log(`Step 3 completed: M-PESA payout initiated for ${transaction.transactionId}`);
-  } catch (error) {
-    console.error('M-PESA payout failed:', error);
     throw error;
   }
 }
