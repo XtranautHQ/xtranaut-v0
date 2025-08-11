@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/db';
 import Transaction from '@/lib/models/Transaction';
+import { broadcastTransactionUpdate } from '@/lib/websocket';
 
 export async function POST(request: NextRequest) {
   try {
@@ -51,6 +52,14 @@ export async function POST(request: NextRequest) {
     }
 
     await transaction.save();
+
+    broadcastTransactionUpdate(transaction.transactionId, {
+      status: transaction.status,
+      steps: transaction.steps,
+      xrplTransaction: transaction.xrplTransaction,
+      mpesaTransaction: transaction.mpesaTransaction,
+      updatedAt: transaction.updatedAt
+    });
     console.log(`Transaction ${transaction.transactionId} updated via B2C result`);
 
     return NextResponse.json({ success: true });

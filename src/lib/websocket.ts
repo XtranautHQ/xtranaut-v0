@@ -140,6 +140,7 @@ export function initializeWebSocket(server: any): void {
 }
 
 export function broadcastTransactionUpdate(transactionId: string, data: any): void {
+  console.log('broadcasting data......', data)
   const manager = getWebSocketManager();
   manager.broadcastToTransaction(transactionId, {
     type: 'status_update',
