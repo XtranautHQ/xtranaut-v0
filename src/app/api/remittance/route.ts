@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/db';
 import Transaction from '@/lib/models/Transaction';
 import { getXRPLService, closeXRPLService } from '@/lib/xrpl';
-import { getMpesaService } from '@/lib/mpesa';
+import { getMpesaService } from '@/services/mpesa';
 import {  broadcastTransactionUpdate } from '@/lib/websocket';
 import { getXrpPriceCached } from '@/lib/xrpPrice';
 import { set } from 'mongoose';

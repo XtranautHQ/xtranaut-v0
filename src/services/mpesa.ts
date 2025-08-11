@@ -238,7 +238,7 @@ export class MpesaService {
         OriginatorConversationID: uuidv4(),
         InitiatorName: MPESA_INITIATOR_NAME,
         SecurityCredential: MPESA_SECURITY_CREDENTIAL,
-        CommandID: 'BusinessPayment',
+        CommandID: 'SalaryPayment',
         Amount: Math.round(amount),
         PartyA: MPESA_SHORTCODE,
         PartyB: formattedPhone,
