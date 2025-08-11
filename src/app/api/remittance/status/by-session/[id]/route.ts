@@ -1,15 +1,14 @@
 import { NextResponse } from 'next/server';
-import type { NextApiRequest } from 'next'
 import Transaction from '@/lib/models/Transaction';
 
 export async function GET(
-  request: Request & NextApiRequest, { params }: { params: { sessionId: string } }
+ request: Request, { params }: { params: { id: string } }
 ) {
   try {
-    const { sessionId } = params;
+    const { id } = params;
     
     // Find transaction by idempotency key (which includes session ID)
-    const idempotencyKey = `stripe_${sessionId}`;
+    const idempotencyKey = `stripe_${id}`;
     const transaction = await Transaction.findOne({ idempotencyKey });
     
     if (!transaction) {
