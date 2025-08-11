@@ -48,26 +48,21 @@ export function TransferStepper({ transactionId, onComplete }: TransferStepperPr
   const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'disconnected'>('connecting');
 
   // WebSocket message handler
-  const handleWebSocketMessage = (message: any) => {
-    console.log('WebSocket message received:', message);
-    
+  const handleWebSocketMessage = (message: any) => {    
     switch (message.type) {
       case 'status_update':
         console.log('Processing status_update:', message.data);
         updateSteps(message.data);
         
         if (message.data.status === 'completed') {
-          console.log('Transaction completed, stopping polling');
           setIsPolling(false);
           onComplete(message.data);
         } else if (message.data.status === 'failed') {
-          console.log('Transaction failed, stopping polling');
           setIsPolling(false);
         }
         break;
         
       case 'transaction_complete':
-        console.log('Processing transaction_complete:', message.data);
         updateSteps(message.data);
         setIsPolling(false);
         onComplete(message.data);
@@ -127,13 +122,9 @@ export function TransferStepper({ transactionId, onComplete }: TransferStepperPr
     };
   }, [transactionId, isConnected, isConnecting]);
 
-  const updateSteps = (data: any) => {
-    console.log('updateSteps called with data:', data);
-    console.log('Current steps before update:', steps);
-    
+  const updateSteps = (data: any) => {    
     const updatedSteps = steps.map(step => {
       const stepData = data.steps?.[step.id];
-      console.log(`Processing step ${step.id}:`, stepData);
       
       if (stepData) {
         const newStatus = stepData.completed ? 'completed' : 
@@ -152,7 +143,6 @@ export function TransferStepper({ transactionId, onComplete }: TransferStepperPr
       return step;
     });
 
-    console.log('Updated steps:', updatedSteps);
     setSteps(updatedSteps);
     
     // Calculate progress with smooth transitions
@@ -160,7 +150,6 @@ export function TransferStepper({ transactionId, onComplete }: TransferStepperPr
     const processingSteps = updatedSteps.filter(step => step.status === 'processing').length;
     const totalSteps = updatedSteps.length;
     const newProgress = ((completedSteps + (processingSteps * 0.5)) / totalSteps) * 100;
-    console.log(`Progress: ${completedSteps} completed, ${processingSteps} processing, ${totalSteps} total = ${newProgress}%`);
     setProgress(newProgress);
     
     // Update current step

@@ -2,6 +2,7 @@ import { Schema, model, models } from "mongoose";
 
 export interface TransactionDocument {
   transactionId: string;
+  idempotencyKey: string;
   sender: {
     name: string;
     email: string;
@@ -30,8 +31,14 @@ export interface TransactionDocument {
     usdToXrp: number;
     usdToLocal: number;
     source: string;
+    timestamp: Date;
+    hash: string;
+    feePercentage: number;
   };
   status: 'pending' | 'xrp_converting' | 'xrp_sent' | 'mpesa_processing' | 'completed' | 'failed';
+  retryCount: number;
+  maxRetries: number;
+  lastRetryAt?: Date;
   steps: {
     usdToXrp: { completed: boolean; timestamp?: Date; error?: string };
     xrpTransfer: { completed: boolean; timestamp?: Date; error?: string; hash?: string; ledgerIndex?: number };
@@ -58,6 +65,12 @@ const TransactionSchema = new Schema<TransactionDocument>(
       type: String,
       required: [true, "Transaction ID is required"],
       unique: true,
+    },
+    idempotencyKey: {
+      type: String,
+      required: [true, "Idempotency key is required"],
+      unique: true,
+      index: true,
     },
     sender: {
       name: {
@@ -138,11 +151,35 @@ const TransactionSchema = new Schema<TransactionDocument>(
         type: String,
         required: [true, "FX rate source is required"],
       },
+      timestamp: {
+        type: Date,
+        required: [true, "FX rate timestamp is required"],
+      },
+      hash: {
+        type: String,
+        required: [true, "FX rate hash is required"],
+      },
+      feePercentage: {
+        type: Number,
+        required: [true, "FX fee percentage is required"],
+        default: 1.0,
+      },
     },
     status: {
       type: String,
       enum: ['pending', 'xrp_converting', 'xrp_sent', 'mpesa_processing', 'completed', 'failed'],
       default: 'pending',
+    },
+    retryCount: {
+      type: Number,
+      default: 0,
+    },
+    maxRetries: {
+      type: Number,
+      default: 3,
+    },
+    lastRetryAt: {
+      type: Date,
     },
     steps: {
       usdToXrp: {
