@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import Transaction from '@/lib/models/Transaction';
 
 export async function GET(
-  request: NextRequest,
-  context: { params: { sessionId: string } }
+  request: Request, 
+  context: any
 ) {
   try {
      const { sessionId } = context.params;
