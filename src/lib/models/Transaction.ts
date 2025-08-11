@@ -51,6 +51,7 @@ export interface TransactionDocument {
     amount: number;
   };
   mpesaTransaction?: {
+    transactionId?: string;
     reference: string;
     status: string;
     amount: number;
