@@ -3,10 +3,10 @@ import type { NextApiRequest } from 'next'
 import Transaction from '@/lib/models/Transaction';
 
 export async function GET(
-  request: NextApiRequest,
+  request: Request & NextApiRequest, { params }: { params: { sessionId: string } }
 ) {
   try {
-    const { sessionId } = request.query;
+    const { sessionId } = params;
     
     // Find transaction by idempotency key (which includes session ID)
     const idempotencyKey = `stripe_${sessionId}`;
