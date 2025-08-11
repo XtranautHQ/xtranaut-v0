@@ -19,7 +19,6 @@ export async function POST(request: NextRequest) {
         ResultDesc,
         TransactionID,
         ConversationID,
-        OriginatorConversationID
       }
     } = body;
 
@@ -77,11 +76,7 @@ export async function POST(request: NextRequest) {
       handleFailedPayout(transaction, ResultDesc);
     }
 
-    await transaction.save();
-
-    
     return NextResponse.json({ success: true });
-
   } catch (error) {
     console.error('M-Pesa B2C result error:', error);
     return NextResponse.json(
