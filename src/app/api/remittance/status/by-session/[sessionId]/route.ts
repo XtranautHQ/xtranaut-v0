@@ -1,14 +1,15 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import Transaction from '@/lib/models/Transaction';
 
 export async function GET(
- request: Request, { params }: { params: { id: string } }
+  request: NextRequest,
+  context: { params: { sessionId: string } }
 ) {
   try {
-    const { id } = params;
+     const { sessionId } = context.params;
     
     // Find transaction by idempotency key (which includes session ID)
-    const idempotencyKey = `stripe_${id}`;
+    const idempotencyKey = `stripe_${sessionId}`;
     const transaction = await Transaction.findOne({ idempotencyKey });
     
     if (!transaction) {
