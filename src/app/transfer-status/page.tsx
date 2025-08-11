@@ -1,11 +1,34 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
+import { Suspense } from 'react';
 import { TransferStepper } from '@/components/TransferStepper';
 import { ConfirmationModal } from '@/components/ConfirmationModal';
 
 export default function TransferStatusPage() {
+  return (
+    <Suspense fallback={<LoadingFallback />}>
+      <TransferStatusPageContent />
+    </Suspense>
+  );
+}
+
+function LoadingFallback() {
+  return (
+    <div className="p-8 max-w-4xl mx-auto">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+        <h1 className="text-2xl font-semibold mb-2">Processing your payment...</h1>
+        <p className="text-gray-600 mb-4">Please wait while we confirm your payment and start the transfer.</p>
+      </div>
+    </div>
+  );
+}
+
+
+import { useEffect, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+
+function TransferStatusPageContent() {
   const params = useSearchParams();
   const router = useRouter();
   const sessionId = params.get('session_id');
@@ -28,7 +51,6 @@ export default function TransferStatusPage() {
 
     const pollForTransaction = async () => {
       try {
-        // Check if transaction exists for this session
         const response = await fetch(`/api/remittance/status/by-session/${sessionId}`);
         if (response.ok) {
           const data = await response.json();
@@ -44,7 +66,6 @@ export default function TransferStatusPage() {
     };
 
     const startPolling = () => {
-      // Try immediately
       pollForTransaction().then((found) => {
         if (found) return;
         
@@ -57,7 +78,6 @@ export default function TransferStatusPage() {
           }
         }, 2000);
 
-        // Timeout after 2 minutes
         timeout = setTimeout(() => {
           clearInterval(pollInterval);
           setError('Transaction not found. Please contact support.');
@@ -130,7 +150,7 @@ export default function TransferStatusPage() {
   return (
     <div className="bg-white p-4">
       <TransferStepper transactionId={transactionId} onComplete={handleComplete} />
-      
+
       {/* Confirmation Modal */}
       {showConfirmation && transactionData && (
         <ConfirmationModal
@@ -141,5 +161,3 @@ export default function TransferStatusPage() {
     </div>
   );
 }
-
-
