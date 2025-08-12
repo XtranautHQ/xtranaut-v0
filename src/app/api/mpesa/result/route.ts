@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Update transaction based on result
-    if (ResultCode === '0') {
+    if (ResultCode == 0) {
       // Success
       transaction.status = 'completed';
       transaction.steps.mpesaPayout.completed = true;
