@@ -221,7 +221,6 @@ export class ErrorHandler {
       timestamp: new Date().toISOString(),
       error: {
         name: error.name,
-        message: error.message,
         stack: error.stack,
         ...errorInfo,
       },
