@@ -133,9 +133,9 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
         hash: fxHash,
         feePercentage,
       },
-      status: 'pending',
+      status: 'xrp_converting',
       steps: {
-        usdToXrp: { completed: false },
+        usdToXrp: { completed: true, timestamp: new Date() },
         xrpTransfer: { completed: false },
         mpesaPayout: { completed: false },
       },
@@ -143,10 +143,10 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
 
     await transaction.save();
     console.log(`Transaction created from Stripe webhook: ${transactionId}`);
+    
 
     // Start processing after a short delay
     setTimeout(() => {
-      console.log('enter')
       processTransfer(transaction).catch(console.error);
     }, 10000);
 

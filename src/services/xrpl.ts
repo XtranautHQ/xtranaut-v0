@@ -1,4 +1,4 @@
-import xrpl, { Client, Wallet } from 'xrpl';
+import { Client, Wallet, xrpToDrops, dropsToXrp, isValidClassicAddress } from 'xrpl';
 
 // XRPL Network Configuration
 const XRPL_NETWORK = process.env.XRPL_NETWORK || 'testnet'; // 'mainnet' or 'testnet'
@@ -7,9 +7,7 @@ const XRPL_SERVER = XRPL_NETWORK === 'mainnet'
   : 'wss://s.altnet.rippletest.net:51233';
 
   
-  // Partner wallet configuration (in production, these would be securely managed)
-  const LIQUIDITY_WALLET_SEED = process.env.LIQUIDITY_WALLET_SEED!;
-  const LIQUIDITY_WALLET_ADDRESS = process.env.LIQUIDITY_WALLET_ADDRESS!;
+const LIQUIDITY_WALLET_SEED = process.env.LIQUIDITY_WALLET_SEED!;
 
 export interface XRPLTransactionResult {
   success: boolean;
@@ -69,7 +67,7 @@ export class XRPLService {
   async getXRPBalance(address: string): Promise<number> {
     try {
       const accountInfo = await this.getAccountInfo(address);
-      return xrpl.dropsToXrp(accountInfo.Balance);
+      return dropsToXrp(accountInfo.Balance);
     } catch (error) {
       console.error('Failed to get XRP balance:', error);
       throw error;
@@ -98,7 +96,7 @@ export class XRPLService {
       const prepared = await this.client.autofill({
         "TransactionType": "Payment",
         "Account": this.liquidityWallet.address,
-        "Amount": xrpl.xrpToDrops(amountXRP.toFixed(3)),
+        "Amount": xrpToDrops(amountXRP.toFixed(3)),
         "Destination": toAddress,
         "Fee": fee,
       });
@@ -142,7 +140,7 @@ export class XRPLService {
 
   async validateAddress(address: string): Promise<boolean> {
     try {
-      return xrpl.isValidClassicAddress(address);
+      return isValidClassicAddress(address);
     } catch {
       return false;
     }

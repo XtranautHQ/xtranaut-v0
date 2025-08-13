@@ -236,41 +236,20 @@ export function TransferStepper({ transactionId, onComplete }: TransferStepperPr
     }
   };
 
-  const getConnectionStatusText = () => {
-    switch (connectionStatus) {
-      case 'connected':
-        return 'Live Updates Connected';
-      case 'connecting':
-        return 'Connecting to Live Updates';
-      case 'disconnected':
-        return 'Connection Lost';
-    }
-  };
 
   return (
     <div className="max-w-5xl mx-auto p-6">
       {/* Enhanced Header */}
       <div className="text-center mb-8">
-        <div className="inline-flex items-center space-x-2 mb-4">
-          {getConnectionStatusIcon()}
-          <span className={`font-medium ${
-            connectionStatus === 'connected' ? 'text-green-600' :
-            connectionStatus === 'connecting' ? 'text-yellow-600' :
-            'text-red-600'
-          }`}>
-            {getConnectionStatusText()}
-          </span>
-        </div>
         <h2 className="text-3xl font-bold text-gray-900 mb-2">
           Processing Your Transfer
         </h2>
-        <p className="text-gray-600 mb-4">
-          Transaction ID: <span className="font-mono bg-gray-100 px-2 py-1 rounded">{transactionId}</span>
-        </p>
         <div className="flex justify-center items-center space-x-4 text-sm text-gray-500">
-          <span>⏱️ Elapsed: {formatTime(elapsedTime)}</span>
+          <p className="text-gray-600">
+            Transaction ID: <span className="font-mono bg-gray-100 px-2 py-1 rounded">{transactionId}</span>
+          </p>
           <span>•</span>
-          <span>🔌 WebSocket: {connectionStatus}</span>
+          <span>⏱️ Elapsed: {formatTime(elapsedTime)}</span>
         </div>
       </div>
 
