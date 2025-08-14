@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
+import { fxRateService } from '@/services/fxRateService';
 
 const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
 
@@ -30,6 +31,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid amount' }, { status: 400 });
     }
 
+    // Get real-time FX rate for the transaction
+    let fxRateVal = fxRate?.usdToLocal || 0;
+    let fxSource = fxRate?.source || 'Unknown';
+    
+    try {
+      const fxRateData = await fxRateService.getExchangeRate(amounts.localCurrency);
+      fxRateVal = fxRateData.usdToLocal;
+      fxSource = fxRateData.source;
+    } catch (error) {
+      console.warn(`Failed to fetch FX rate for ${amounts.localCurrency}:`, error);
+    }
+
     // Compact metadata to fit Stripe limits
     const metadata: Record<string, string> = {
       sn: String(sender.name),
@@ -39,8 +52,9 @@ export async function POST(request: NextRequest) {
       cc: String(receiver.country),
       usd: String(usdAmount),
       add: vault?.enabled ? '1' : '0',
-      lc: String(amounts.localCurrency || fxRate?.localCurrency || ''),
-      fx: String(fxRate?.usdToLocal || ''),
+      lc: String(amounts.localCurrency || ''),
+      fx: String(fxRateVal || ''),
+      fs: String(fxSource || ''),
     };
 
     const session = await stripe.checkout.sessions.create({

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { CheckIcon, XMarkIcon, ClockIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline';
 import { useWebSocket } from '@/hooks/useWebSocket';
 
@@ -147,10 +148,8 @@ export function TransferStepper({ transactionId, onComplete }: TransferStepperPr
     
     // Calculate progress with smooth transitions
     const completedSteps = updatedSteps.filter(step => step.status === 'completed').length;
-    const processingSteps = updatedSteps.filter(step => step.status === 'processing').length;
     const totalSteps = updatedSteps.length;
-    const newProgress = ((completedSteps + (processingSteps * 0.5)) / totalSteps) * 100;
-    setProgress(newProgress);
+    setProgress(completedSteps / totalSteps * 100);
     
     // Update current step
     const processingIndex = updatedSteps.findIndex(step => step.status === 'processing');
@@ -225,18 +224,6 @@ export function TransferStepper({ transactionId, onComplete }: TransferStepperPr
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const getConnectionStatusIcon = () => {
-    switch (connectionStatus) {
-      case 'connected':
-        return <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>;
-      case 'connecting':
-        return <div className="w-3 h-3 bg-yellow-500 rounded-full animate-pulse"></div>;
-      case 'disconnected':
-        return <div className="w-3 h-3 bg-red-500 rounded-full"></div>;
-    }
-  };
-
-
   return (
     <div className="max-w-5xl mx-auto p-6">
       {/* Enhanced Header */}
@@ -257,10 +244,6 @@ export function TransferStepper({ transactionId, onComplete }: TransferStepperPr
       <div className="mb-8">
         <div className="flex justify-between items-center mb-3">
           <span className="text-sm font-semibold text-gray-700">Overall Progress</span>
-          <div className="flex items-center space-x-2">
-            <span className="text-lg font-bold text-blue-600">{Math.round(progress)}%</span>
-            <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
-          </div>
         </div>
         <div className="relative">
           <div className="w-full bg-gray-200 rounded-full h-4 overflow-hidden">
@@ -268,17 +251,6 @@ export function TransferStepper({ transactionId, onComplete }: TransferStepperPr
               className="bg-gradient-to-r from-blue-500 via-blue-600 to-green-500 h-4 rounded-full transition-all duration-700 ease-out shadow-lg"
               style={{ width: `${progress}%` }}
             ></div>
-          </div>
-          {/* Progress indicator dots */}
-          <div className="absolute top-0 left-0 w-full h-4 flex justify-between items-center px-2">
-            {steps.map((_, index) => (
-              <div 
-                key={index}
-                className={`w-2 h-2 rounded-full transition-all duration-300 ${
-                  index <= currentStep ? 'bg-white shadow-sm' : 'bg-transparent'
-                }`}
-              ></div>
-            ))}
           </div>
         </div>
       </div>
@@ -389,7 +361,12 @@ export function TransferStepper({ transactionId, onComplete }: TransferStepperPr
                         <div className="space-y-3 text-sm">
                           <div className="flex justify-between items-center">
                             <span className="text-gray-600 font-medium">Transaction Hash:</span>
-                            <span className="font-mono text-gray-900 bg-gray-100 px-2 py-1 rounded text-xs">{step.details.hash}</span>
+                            <Link 
+                              className="font-mono text-gray-900 bg-gray-100 px-2 py-1 rounded text-xs" 
+                              href={`https://${process.env.NEXT_PUBLIC_XRPL_NETWORK === 'testnet' ? 'testnet.' : ''}xrpl.org/transactions/${step.details.hash}`} target="_blank"
+                            >
+                              {step.details.hash}
+                            </Link>
                           </div>
                           <div className="flex justify-between items-center">
                             <span className="text-gray-600 font-medium">Ledger Index:</span>
@@ -397,7 +374,7 @@ export function TransferStepper({ transactionId, onComplete }: TransferStepperPr
                           </div>
                           <div className="flex justify-between items-center">
                             <span className="text-gray-600 font-medium">Network Fee:</span>
-                            <span className="font-mono text-gray-900">{step.details.fee} XRP</span>
+                            <span className="font-mono text-gray-900">{parseFloat(step.details.fee) / 1000000} XRP</span>
                           </div>
                         </div>
                       )}
