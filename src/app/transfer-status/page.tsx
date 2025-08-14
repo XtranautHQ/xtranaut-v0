@@ -37,6 +37,7 @@ function TransferStatusPageContent() {
   const [transactionData, setTransactionData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isRetrying, setIsRetrying] = useState(false);
 
   // Poll for transaction creation from Stripe webhook
   useEffect(() => {
@@ -110,6 +111,68 @@ function TransferStatusPageContent() {
     setShowConfirmation(true);
   };
 
+  const handleRetry = async () => {
+    if (!transactionId) return;
+    
+    setIsRetrying(true);
+    try {
+      const response = await fetch('/api/remittance/retry', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ transactionId }),
+      });
+
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.error || 'Retry failed');
+      }
+
+      // Reset states for retry
+      setIsLoading(true);
+      setError(null);
+      
+      // Start polling again for the retried transaction
+      const pollForTransaction = async () => {
+        try {
+          const response = await fetch(`/api/remittance/status/by-session/${sessionId}`);
+          if (response.ok) {
+            const data = await response.json();
+            setTransactionId(data.transactionId);
+            setIsLoading(false);
+            return true;
+          }
+          return false;
+        } catch (error) {
+          console.error('Error polling for transaction:', error);
+          return false;
+        }
+      };
+
+      // Poll every 2 seconds for up to 2 minutes
+      const pollInterval = setInterval(async () => {
+        const found = await pollForTransaction();
+        if (found) {
+          clearInterval(pollInterval);
+        }
+      }, 2000);
+
+      setTimeout(() => {
+        clearInterval(pollInterval);
+        setError('Retry failed. Please try again or contact support.');
+        setIsLoading(false);
+      }, 120000);
+
+    } catch (error) {
+      console.error('Retry failed:', error);
+      setError(error instanceof Error ? error.message : 'Retry failed. Please try again.');
+    } finally {
+      setIsRetrying(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="p-8 max-w-4xl mx-auto">
@@ -149,7 +212,11 @@ function TransferStatusPageContent() {
 
   return (
     <div className="bg-white p-4">
-      <TransferStepper transactionId={transactionId} onComplete={handleComplete} />
+      <TransferStepper 
+        transactionId={transactionId} 
+        onComplete={handleComplete}
+        onRetry={handleRetry}
+      />
 
       {/* Confirmation Modal */}
       {showConfirmation && transactionData && (
@@ -157,6 +224,17 @@ function TransferStatusPageContent() {
           transactionData={transactionData}
           onClose={() => setShowConfirmation(false)}
         />
+      )}
+
+      {/* Retry Loading Overlay */}
+      {isRetrying && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg shadow-xl text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <h3 className="text-lg font-semibold mb-2">Retrying Transfer</h3>
+            <p className="text-gray-600">Please wait while we retry your transaction...</p>
+          </div>
+        </div>
       )}
     </div>
   );

@@ -343,11 +343,11 @@ export function RemittanceForm({ xrpPrice }: RemittanceFormProps) {
           local: localAmount,
           localCurrency: selectedCountry.currency,
         },
-        fees: {
-          platformFee: FIXED_PLATFORM_FEE,
-          totalFee: FIXED_PLATFORM_FEE,
-          savings: savingsAmount,
-        },
+                 fees: {
+           platformFee: (FIXED_PLATFORM_FEE / 100) * parseFloat(formData.amount),
+           totalFee: (FIXED_PLATFORM_FEE / 100) * parseFloat(formData.amount),
+           savings: savingsAmount,
+         },
         vault: {
           enabled: formData.addToVault,
           amount: formData.addToVault ? 20 : 0,

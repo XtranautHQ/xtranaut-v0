@@ -334,13 +334,11 @@ export async function retryTransfer(transactionId: string) {
     throw new Error(`Transaction not found: ${transactionId}`);
   }
 
-  if (transaction.steps.xrpTransfer.completed == false
-    && transaction.steps.xrpTransfer.error) {
+  if (transaction.steps.xrpTransfer.completed == false) {
     performXRPTransfer(transaction).catch(console.error);
   }
 
-  if (transaction.steps.mpesaPayout.completed == false
-    && transaction.steps.mpesaPayout.error) {
+  if (transaction.steps.mpesaPayout.completed == false) {
     performMpesaPayout(transaction).catch(console.error);
   }
 

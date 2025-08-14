@@ -68,14 +68,15 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
       fx: usdToLocalRate
     } = metadata;
 
-    // Generate idempotency key based on session ID
-    const idempotencyKey = `${uuidv4().replace(/-/g, '').slice(0, 8)}-${session.id}`;
+    // Use session ID as idempotency key to match the success URL
+    const idempotencyKey = session.id;
+    console.log(`Processing Stripe webhook for session: ${idempotencyKey}`);
     
     // Check if transaction already exists
     const existingTransaction = await Transaction.findOne({ idempotencyKey });
     if (existingTransaction) {
       console.log(`Transaction already exists for idempotency key: ${idempotencyKey}`);
-      return;
+      throw new Error('Transaction duplicated');
     }
 
     // Get current XRP price
@@ -89,13 +90,14 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
       feePercentage
     );
 
-    // Calculate amounts
-    const platformFee = parseFloat(usdAmount) * 0.0025; // 0.25% platform fee
-    const usdAmountNum = parseFloat(usdAmount) - platformFee;
-    const xrpAmount = usdAmountNum / usdToXrpRate;
-    const localAmount = usdAmountNum * parseFloat(usdToLocalRate || '0');
+    // Calculate amounts with platform fee
+    const usdAmountNum = parseFloat(usdAmount);
+    const platformFee = usdAmountNum * 0.0025; // 0.25% platform fee
+    const receiverAmountUSD = usdAmountNum - platformFee;
+    const xrpAmount = receiverAmountUSD / usdToXrpRate;
+    const localAmount = receiverAmountUSD * parseFloat(usdToLocalRate || '0');
     const totalFee = platformFee;
-    const savings = (parseFloat(usdAmount) * 0.08) - totalFee; // 8% Western Union fee comparison
+    const savings = (usdAmountNum * 0.08) - totalFee; // 8% Western Union fee comparison
 
     // Create transaction record
     const transactionId = `TXN-${Date.now()}-${uuidv4().replace(/-/g, '').slice(0, 8)}`;

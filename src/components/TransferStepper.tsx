@@ -18,9 +18,10 @@ interface Step {
 interface TransferStepperProps {
   transactionId: string;
   onComplete: (data: any) => void;
+  onRetry?: () => void;
 }
 
-export function TransferStepper({ transactionId, onComplete }: TransferStepperProps) {
+export function TransferStepper({ transactionId, onComplete, onRetry }: TransferStepperProps) {
   const [steps, setSteps] = useState<Step[]>([
     {
       id: 'usdToXrp',
@@ -47,6 +48,8 @@ export function TransferStepper({ transactionId, onComplete }: TransferStepperPr
   const [progress, setProgress] = useState(0);
   const [elapsedTime, setElapsedTime] = useState(0);
   const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'disconnected'>('connecting');
+  const [transactionStatus, setTransactionStatus] = useState<string>('pending');
+  const [retryCount, setRetryCount] = useState<number>(0);
 
   // WebSocket message handler
   const handleWebSocketMessage = (message: any) => {    
@@ -57,9 +60,13 @@ export function TransferStepper({ transactionId, onComplete }: TransferStepperPr
         
         if (message.data.status === 'completed') {
           setIsPolling(false);
+          setTransactionStatus('completed');
+          setRetryCount(message.data.retryCount || 0);
           onComplete(message.data);
         } else if (message.data.status === 'failed') {
           setIsPolling(false);
+          setTransactionStatus('failed');
+          setRetryCount(message.data.retryCount || 0);
         }
         break;
         
@@ -91,6 +98,41 @@ export function TransferStepper({ transactionId, onComplete }: TransferStepperPr
     console.log('WebSocket connection closed');
     setConnectionStatus('disconnected');
   };
+
+  // // Poll for transaction status as fallback
+  // useEffect(() => {
+  //   if (!transactionId) return;
+
+  //   const pollStatus = async () => {
+  //     try {
+  //       const response = await fetch(`/api/remittance/status/${transactionId}`);
+  //       if (response.ok) {
+  //         const data = await response.json();
+  //         setTransactionStatus(data.status);
+  //         setRetryCount(data.retryCount || 0);
+          
+  //         if (data.status === 'completed') {
+  //           setIsPolling(false);
+  //           onComplete(data);
+  //         } else if (data.status === 'failed') {
+  //           setIsPolling(false);
+  //         }
+          
+  //         // Update steps from the response
+  //         if (data.steps) {
+  //           updateSteps(data);
+  //         }
+  //       }
+  //     } catch (error) {
+  //       console.error('Error polling transaction status:', error);
+  //     }
+  //   };
+
+  //   // Poll every 5 seconds as fallback
+  //   const pollInterval = setInterval(pollStatus, 5000);
+
+  //   return () => clearInterval(pollInterval);
+  // }, [transactionId, onComplete]);
 
   // Initialize WebSocket connection
   const { isConnected, isConnecting } = useWebSocket({
@@ -420,6 +462,52 @@ export function TransferStepper({ transactionId, onComplete }: TransferStepperPr
               ⚠️ Connection lost. Attempting to reconnect...
             </p>
           )}
+        </div>
+      )}
+
+      {/* Failed Transfer Actions */}
+      {!isPolling && (transactionStatus === 'failed' || steps.some(step => step.status === 'failed')) && (
+        <div className="text-center mt-8 p-6 bg-red-50 rounded-xl border border-red-200">
+          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <ExclamationTriangleIcon className="w-8 h-8 text-red-600" />
+          </div>
+          <h3 className="text-lg font-semibold text-red-800 mb-2">Transfer Failed</h3>
+          <p className="text-red-700 mb-6">
+            We encountered an issue processing your transfer. You can retry the transaction or start a new remittance.
+          </p>
+          <p className="text-red-600 text-sm mb-4">
+            Retry attempts: {retryCount} / 3
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            {onRetry && retryCount < 3 && (
+              <button
+                onClick={onRetry}
+                className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors duration-200 flex items-center justify-center space-x-2"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                <span>Retry Transfer</span>
+              </button>
+            )}
+            {retryCount >= 3 && (
+              <div className="text-center">
+                <p className="text-red-600 text-sm mb-2">Maximum retry attempts reached</p>
+              </div>
+            )}
+            <Link
+              href="/remittance"
+              className="bg-gray-600 hover:bg-gray-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors duration-200 flex items-center justify-center space-x-2"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+              </svg>
+              <span>New Remittance</span>
+            </Link>
+          </div>
+          <p className="text-red-600 text-sm mt-4">
+            If the problem persists, please contact our support team.
+          </p>
         </div>
       )}
     </div>

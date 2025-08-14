@@ -3,7 +3,7 @@ import dbConnect from '@/lib/db';
 import Transaction from '@/lib/models/Transaction';
 import { broadcastError, broadcastTransactionUpdate } from '@/lib/websocket';
 import { shouldRetry, calculateRetryDelay, isRetryableError } from '@/lib/utils';
-import { processTransfer } from '@/services/paymentProcessor';
+import { performMpesaPayout } from '@/services/paymentProcessor';
 
 export async function POST(request: NextRequest) {
   try {
@@ -145,7 +145,7 @@ async function retryMpesaPayout(transaction: any) {
     
     setTimeout(async () => {
       try {
-        processTransfer(transaction);
+        performMpesaPayout(transaction);
       } catch (error) {
         console.error(`Error in retry simulation for ${transaction.transactionId}:`, error);
       }
