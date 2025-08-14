@@ -497,7 +497,7 @@ export function RemittanceForm({ xrpPrice }: RemittanceFormProps) {
         {/* FX Rate Display */}
         {selectedCountry && (
           <div className="bg-blue-50 p-4 rounded-lg mb-4">
-            <div className="flex items-center justify-between">
+            <div className="flex sm:flex-row flex-col sm:items-center items-start justify-between">
               <div>
                 {fxRatesLoading ? (
                   <div className="flex items-center space-x-2">
@@ -520,7 +520,7 @@ export function RemittanceForm({ xrpPrice }: RemittanceFormProps) {
                   <p className="text-sm text-red-600">Exchange rate unavailable</p>
                 )}
               </div>
-              <div className="text-right">
+              <div className="sm:flex-none flex items-center text-right">
                 <p className="text-sm text-blue-800">
                   <strong>Local Amount:</strong>
                 </p>
@@ -544,17 +544,19 @@ export function RemittanceForm({ xrpPrice }: RemittanceFormProps) {
         )}
 
         {/* Vault Toggle */}
-        <div className="flex items-center space-x-3 p-4 bg-green-50 rounded-lg">
-          <input
-            type="checkbox"
-            id="addToVault"
-            checked={formData.addToVault}
-            onChange={(e) => handleInputChange('addToVault', e.target.checked)}
-            className="w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-green-500"
-          />
-          <label htmlFor="addToVault" className="text-sm font-medium text-green-800">
-            Add $20 to savings vault?
-          </label>
+        <div className="flex sm:flex-row flex-col items-center gap-3 p-4 bg-green-50 rounded-lg">
+          <div className="flex items-center space-x-2">
+            <input
+              type="checkbox"
+              id="addToVault"
+              checked={formData.addToVault}
+              onChange={(e) => handleInputChange('addToVault', e.target.checked)}
+              className="w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-green-500"
+            />
+            <label htmlFor="addToVault" className="text-sm font-medium text-green-800">
+              Add $20 to savings vault?
+            </label>
+          </div>
           <span className="text-xs text-green-600">(Demo feature - no real deduction)</span>
         </div>
 

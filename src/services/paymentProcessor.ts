@@ -286,8 +286,6 @@ export async function performMpesaPayout(transaction: any) {
 
     if (payoutResult.success) {
       transaction.status = 'mpesa_processing';
-      transaction.steps.mpesaPayout.completed = true;
-      transaction.steps.mpesaPayout.timestamp = new Date();
       transaction.steps.mpesaPayout.reference = payoutResult.reference;
       
       transaction.mpesaTransaction = {
