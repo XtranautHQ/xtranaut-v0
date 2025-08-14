@@ -9,7 +9,7 @@ interface HistoryItem {
   sender: { name: string; email: string };
   receiver: { name: string; phone: string; country: string };
   amounts: { usd: number; xrp: number; local: number; localCurrency: string };
-  fees: { networkFee: number; totalFee: number; savings: number };
+  fees: { platformFee: number; totalFee: number; savings: number };
   status: string;
   createdAt: string;
   updatedAt: string;

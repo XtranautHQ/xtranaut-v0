@@ -19,7 +19,7 @@ export interface TransactionDocument {
     localCurrency: string;
   };
   fees: {
-    networkFee: number;
+    platformFee: number;
     totalFee: number;
     savings: number;
   };
@@ -116,7 +116,7 @@ const TransactionSchema = new Schema<TransactionDocument>(
       },
     },
     fees: {
-      networkFee: {
+      platformFee: {
         type: Number,
         required: [true, "Network fee is required"],
       },

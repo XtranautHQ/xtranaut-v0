@@ -29,7 +29,7 @@ const COUNTRIES = [
   { code: 'TZ', name: 'Tanzania', currency: 'TZS' },
 ];
 
-const FIXED_NETWORK_FEE = 0.25; // XRP
+const FIXED_PLATFORM_FEE = 0.25; // 0.25% platform fee
 const WESTERN_UNION_FEE_PERCENTAGE = 8; // 8% fee for comparison
 
 export function RemittanceForm({ xrpPrice }: RemittanceFormProps) {
@@ -118,7 +118,7 @@ export function RemittanceForm({ xrpPrice }: RemittanceFormProps) {
   useEffect(() => {
     if (formData.amount && selectedCountry && fxRates[selectedCountry.currency]) {
       const usdAmount = parseFloat(formData.amount);
-      const xrpAmount = (usdAmount - FIXED_NETWORK_FEE) / xrpPrice;
+      const xrpAmount = (usdAmount - FIXED_PLATFORM_FEE * usdAmount) / xrpPrice;
       const currentFxRate = fxRates[selectedCountry.currency].usdToLocal;
       const localAmount = usdAmount * currentFxRate;
       
@@ -127,8 +127,9 @@ export function RemittanceForm({ xrpPrice }: RemittanceFormProps) {
       
       // Calculate savings compared to Western Union
       const westernUnionFee = usdAmount * (WESTERN_UNION_FEE_PERCENTAGE / 100);
-      const xrpFee = FIXED_NETWORK_FEE;
-      const savings = westernUnionFee - xrpFee;
+      const platformFee = usdAmount * (FIXED_PLATFORM_FEE / 100);
+      const savings = westernUnionFee - platformFee;
+      console.log('💰 Savings:', savings);
       setSavingsAmount(savings);
     }
   }, [formData.amount, selectedCountry, xrpPrice, fxRates]);
@@ -343,8 +344,8 @@ export function RemittanceForm({ xrpPrice }: RemittanceFormProps) {
           localCurrency: selectedCountry.currency,
         },
         fees: {
-          networkFee: FIXED_NETWORK_FEE,
-          totalFee: FIXED_NETWORK_FEE,
+          platformFee: FIXED_PLATFORM_FEE,
+          totalFee: FIXED_PLATFORM_FEE,
           savings: savingsAmount,
         },
         vault: {
@@ -562,8 +563,8 @@ export function RemittanceForm({ xrpPrice }: RemittanceFormProps) {
           <h4 className="font-semibold text-gray-900 mb-3">Fee Breakdown</h4>
           <div className="space-y-2 text-sm">
             <div className="flex justify-between">
-              <span>Network Fee (XRPL):</span>
-              <span className="font-medium">{FIXED_NETWORK_FEE} XRP (${(FIXED_NETWORK_FEE * xrpPrice).toFixed(2)})</span>
+              <span>Platform Fee:</span>
+              <span className="font-medium">{FIXED_PLATFORM_FEE} % (${((FIXED_PLATFORM_FEE / 100) * parseFloat(formData.amount)).toFixed(2)})</span>
             </div>
             <div className="flex justify-between text-green-600">
               <span>Savings vs Western Union:</span>
@@ -571,7 +572,7 @@ export function RemittanceForm({ xrpPrice }: RemittanceFormProps) {
             </div>
             <div className="border-t pt-2 flex justify-between font-semibold">
               <span>Total Fee:</span>
-              <span>${(FIXED_NETWORK_FEE * xrpPrice).toFixed(2)}</span>
+              <span>${((FIXED_PLATFORM_FEE / 100) * parseFloat(formData.amount)).toFixed(2)}</span>
             </div>
           </div>
         </div>

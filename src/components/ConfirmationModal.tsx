@@ -110,8 +110,8 @@ export function ConfirmationModal({ transactionData, onClose }: ConfirmationModa
             <h3 className="font-semibold text-gray-900 mb-2">Fee Details</h3>
             <div className="space-y-1 text-sm">
               <div className="flex justify-between">
-                <span className="text-gray-600">Network Fee:</span>
-                <span className="font-medium">{transactionData.fees.networkFee} XRP</span>
+                <span className="text-gray-600">Platform Fee:</span>
+                <span className="font-medium">{transactionData.fees.platformFee} USD</span>
               </div>
               <div className="flex justify-between text-green-600">
                 <span>Total Savings:</span>

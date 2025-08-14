@@ -5,6 +5,7 @@ import Transaction from '@/lib/models/Transaction';
 import { generateFXRateHash } from '@/lib/utils';
 import { getXrpPriceCached } from '@/lib/xrpPrice';
 import { processTransfer } from '@/services/paymentProcessor';
+import { v4 as uuidv4 } from 'uuid';
 
 const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
 const stripeWebhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
@@ -68,7 +69,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     } = metadata;
 
     // Generate idempotency key based on session ID
-    const idempotencyKey = `stripe_${session.id}`;
+    const idempotencyKey = `${uuidv4().replace(/-/g, '').slice(0, 8)}-${session.id}`;
     
     // Check if transaction already exists
     const existingTransaction = await Transaction.findOne({ idempotencyKey });
@@ -89,15 +90,15 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     );
 
     // Calculate amounts
-    const usdAmountNum = parseFloat(usdAmount);
+    const platformFee = parseFloat(usdAmount) * 0.0025; // 0.25% platform fee
+    const usdAmountNum = parseFloat(usdAmount) - platformFee;
     const xrpAmount = usdAmountNum / usdToXrpRate;
     const localAmount = usdAmountNum * parseFloat(usdToLocalRate || '0');
-    const networkFee = 0.25; // Fixed XRP network fee
-    const totalFee = networkFee * usdToXrpRate;
-    const savings = (usdAmountNum * 0.08) - totalFee; // 8% Western Union fee comparison
+    const totalFee = platformFee;
+    const savings = (parseFloat(usdAmount) * 0.08) - totalFee; // 8% Western Union fee comparison
 
     // Create transaction record
-    const transactionId = `TXN-${Date.now()}`;
+    const transactionId = `TXN-${Date.now()}-${uuidv4().replace(/-/g, '').slice(0, 8)}`;
     const transaction = new Transaction({
       transactionId,
       idempotencyKey,
@@ -117,7 +118,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
         localCurrency: localCurrency || 'KES',
       },
       fees: {
-        networkFee,
+        platformFee,
         totalFee,
         savings,
       },

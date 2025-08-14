@@ -119,8 +119,8 @@ export async function processTransfer(transaction: any) {
 
 //     const xrpAmount = usdAmountNum / usdToXrpRate;
 //     const localAmount = usdAmountNum * parseFloat(usdToLocalRate || '0');
-//     const networkFee = 0.25; // Fixed XRP network fee
-//     const totalFee = networkFee * usdToXrpRate;
+//     const platformFee = 0.25; // Fixed XRP network fee
+//     const totalFee = platformFee * usdToXrpRate;
 //     const savings = (usdAmountNum * 0.08) - totalFee; // 8% Western Union fee comparison
 
 //     // Create transaction record with enhanced security
@@ -144,7 +144,7 @@ export async function processTransfer(transaction: any) {
 //         localCurrency: localCurrency || 'KES',
 //       },
 //       fees: {
-//         networkFee,
+//         platformFee,
 //         totalFee,
 //         savings,
 //       },
