@@ -204,7 +204,7 @@ We integrate **XRPL's low-fee rails** with a comprehensive suite of services no 
 - Real-world asset tokenization fees
 
 **Cost Structure**
-- XRPL network fees (0.25 % per transaction)
+- Platform fees (0.25 % per transaction)
 - KYC verification costs
 - Mobile money integration fees
 - Regulatory compliance costs
